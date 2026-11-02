@@ -116,6 +116,10 @@
   function pct() { return Math.round((doneCount() / 12) * 100); }
 
   /* ---------------- 章节渲染 ---------------- */
+  function renderBlocks(blocks) {
+    return blocks.map(blockHtml).join("");
+  }
+
   function chapterHTML(ch, idx, total) {
     var prev = idx > 0 ? chapterById(chapters[idx - 1].id) : null;
     var next = idx < total - 1 ? chapterById(chapters[idx + 1].id) : null;
@@ -424,6 +428,78 @@
     observeReveal();
   }
 
+  /* ---------------- 脚本拆解 ---------------- */
+  function initScripts() {
+    var mount = $("#scriptMount");
+    if (!mount) return;
+    var list = window.SCRIPTS || [];
+
+    function draw(cat) {
+      var out = list.filter(function (s) { return !cat || cat === "all" || s.cat === cat; });
+      mount.innerHTML = out.map(function (s, i) {
+        var lv = s.level === "基础" ? "easy" : s.level === "挑战" ? "hard" : "mid";
+        return '<article class="script-card' + (i === 0 ? " open" : "") + '">' +
+          '<div class="script-head" role="button" tabindex="0">' +
+            '<span class="eno">SCRIPT ' + s.no + "</span>" +
+            "<h2>" + s.title + "</h2>" +
+            '<span class="tag">' + s.cat + "</span>" +
+            '<span class="task-level ' + lv + '">' + s.level + "</span>" +
+            '<span class="arrow">▶</span>' +
+          "</div>" +
+          '<div class="script-body">' +
+            '<p class="script-sub">' + s.subtitle + '</p>' +
+            '<div class="scene"><b>为什么值得拆</b><p>' + s.scene + "</p></div>" +
+            '<div class="script-meta"><span>' + s.time + '</span><span>' + s.tags.join(" · ") + "</span></div>" +
+            '<h3 class="sec-title">需求拆解</h3><ul class="reqs">' +
+              s.requirements.map(function (r) { return "<li>" + r + "</li>"; }).join("") + "</ul>" +
+            '<h3 class="sec-title">逻辑流程</h3><div class="steps">' +
+              s.flow.map(function (f, fi) {
+                return '<div class="step"><span class="sn">' + (fi + 1) + '</span><div><b>' + f.title + "</b><p>" + f.body + "</p></div></div>";
+              }).join("") + "</div>" +
+            '<h3 class="sec-title">完整脚本</h3>' +
+              codeBlock({ x: s.code, title: s.id + ".py" }) +
+            '<h3 class="sec-title">逐段讲解</h3><div class="walk-grid">' +
+              s.walkthrough.map(function (w, wi) {
+                return '<div class="walk-item"><span class="wn">' + (wi + 1) + '</span><div><b>' + w.title + "</b><p>" + w.body + "</p></div></div>";
+              }).join("") + "</div>" +
+            '<h3 class="sec-title">逻辑写错会怎样</h3>' +
+              s.wrong.map(function (w) {
+                return '<div class="pitfall"><span class="pi">LOGIC</span><div><b>' + w.title + "</b><p>" + w.body + "</p></div></div>";
+              }).join("") +
+            '<h3 class="sec-title">可复用点</h3><div class="reuse">' +
+              s.reuse.map(function (r) { return '<span class="tag tag-lime">' + r + "</span>"; }).join("") + "</div>" +
+            '<div class="callout tip" style="margin-top:22px"><div class="co-ico">✓</div><div><div class="callout-t">写之前先问自己</div><div class="callout-b">' + s.tip + "</div></div></div>" +
+          "</div></article>";
+      }).join("") || '<div class="card"><p>这个分类下还没有脚本。</p></div>';
+
+      $$(".script-head", mount).forEach(function (h) {
+        function toggle() { h.parentNode.classList.toggle("open"); }
+        h.addEventListener("click", toggle);
+        h.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+        });
+      });
+    }
+
+    $$(".chip[data-scfilter]").forEach(function (chip) {
+      chip.addEventListener("click", function () {
+        $$(".chip[data-scfilter]").forEach(function (c) { c.classList.remove("active"); });
+        chip.classList.add("active");
+        draw(chip.getAttribute("data-scfilter"));
+      });
+    });
+    draw("all");
+
+    var repos = $("#scriptRepos");
+    if (repos && window.SCRIPT_REPOS) {
+      repos.innerHTML = window.SCRIPT_REPOS.map(function (r) {
+        return '<a class="gh-card reveal" href="' + r.link + '" target="_blank" rel="noopener">' +
+          '<span class="star">GH</span><div><b>' + r.name + "</b><span>" + r.desc + "</span></div></a>";
+      }).join("");
+    }
+    observeReveal();
+  }
+
   /* ---------------- 练习 ---------------- */
   function initPractice() {
     var mount = $("#exerMount");
@@ -545,11 +621,14 @@
     if (page === "books") initBooks();
     if (page === "videos") initVideos();
     if (page === "practice") initPractice();
+    if (page === "scripts") initScripts();
   });
 
   window.PY = {
     highlight: highlight,
     escapeHtml: escapeHtml,
+    codeBlock: codeBlock,
+    renderBlocks: renderBlocks,
     getProgress: getProgress,
     setDone: setDone,
     isDone: isDone,

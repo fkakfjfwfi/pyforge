@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>脚本拆解 · 读懂优秀 Python 脚本的逻辑 | PyForge</title>
+<meta name="description" content="6 个完整 Python 脚本拆解：批量重命名、CSV 清洗、API 分页、日志统计、目录去重、增量同步。从需求拆解到逻辑流程、逐段讲解与可复用点。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="scripts">
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="index.html">
+      <span class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M8 4L4 12l4 8M16 4l4 8-4 8" stroke="#37e0ff" stroke-width="2"/><circle cx="12" cy="12" r="2.2" fill="#8b6cff"/></svg>
+      </span>
+      <span class="logo-text">PyForge<small>PYTHON TRAINING</small></span>
+    </a>
+    <button class="nav-toggle" type="button" aria-label="打开菜单">☰</button>
+    <div class="nav-links">
+      <a href="index.html">首页</a>
+      <a href="learn.html">12 章课程</a>
+      <a href="scripts.html">脚本拆解</a>
+      <a href="books.html">书单</a>
+      <a href="videos.html">视频精讲</a>
+      <a href="practice.html">练习</a>
+      <a class="nav-cta" href="learn.html#ch01">开始学习</a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="page-head">
+    <span class="eyebrow">SCRIPT LAB · 6 TEARDOWNS</span>
+    <h1>觉得自己的脚本「没逻辑」，<span class="grad">通常不是语法问题</span></h1>
+    <p>别人的脚本能跑、能改、能重跑；你的脚本也能跑，但改一处就崩、跑第二遍就出错。差别往往在结构：先计划还是先动手、失败时留下什么、什么时候该停。下面 6 个脚本把这些问题拆开讲。</p>
+  </div>
+
+  <section class="section" style="padding-top:6px">
+    <div class="section-head">
+      <div>
+        <span class="kicker">SKELETON</span>
+        <h2>一个能长期用的脚本，通常有这六段</h2>
+        <p>不是每个脚本都要写全六段，但你要知道每一段负责什么。缺一段，问题就会在某个深夜冒出来。</p>
+      </div>
+    </div>
+    <div class="grid g3">
+      <div class="card"><span class="num-badge">01</span><div class="card-title">入口：只解析参数</div><p><code>argparse</code> 负责把命令行变成变量。这里不写业务，只决定「默认值是什么、哪些参数必填」。</p></div>
+      <div class="card"><span class="num-badge">02</span><div class="card-title">输入：先校验再开工</div><p>路径存在吗？编码对吗？必填字段齐吗？在动手前失败，比跑到一半失败便宜得多。</p></div>
+      <div class="card"><span class="num-badge">03</span><div class="card-title">计划：先算出要做什么</div><p>把决策放进纯函数，返回一个列表或映射。计划可以打印、可以测试，也可以先 dry-run。</p></div>
+      <div class="card"><span class="num-badge">04</span><div class="card-title">执行：副作用集中</div><p>读写文件、发请求、改数据库，尽量只出现在这一层。副作用越集中，越容易回滚和重跑。</p></div>
+      <div class="card"><span class="num-badge">05</span><div class="card-title">记录：留下证据</div><p>日志、失败清单、checkpoint。脚本崩了以后，你要能回答「做到哪一步、哪些失败了」。</p></div>
+      <div class="card"><span class="num-badge">06</span><div class="card-title">收尾：汇总与退出码</div><p>成功多少、失败多少；该返回 0 还是 1。定时任务靠退出码判断要不要告警。</p></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <span class="kicker">HOW TO READ</span>
+        <h2>读别人的脚本，用五遍法</h2>
+        <p>不要从第一行读到最后一行。按「结构 → 数据 → 副作用 → 失败 → 复述」的顺序读，速度会快很多。</p>
+      </div>
+    </div>
+    <div class="grid g2">
+      <div class="card"><div class="card-title">第 1 遍 · 只看入口</div><p>找 <code>if __name__ == "__main__"</code> 和 <code>main()</code>，看它接受什么参数、调用哪几个函数。先建立骨架，不读细节。</p></div>
+      <div class="card"><div class="card-title">第 2 遍 · 画数据流</div><p>用箭头写下：输入是什么 → 经过哪些函数 → 最后变成什么。画不出来，说明你还没读懂。</p></div>
+      <div class="card"><div class="card-title">第 3 遍 · 标副作用</div><p>圈出所有读写文件、网络请求、打印、删除。副作用越集中，脚本越好改；越分散，越要警惕。</p></div>
+      <div class="card"><div class="card-title">第 4 遍 · 找失败路径</div><p>看哪里会抛异常、哪里重试、哪里写 checkpoint。没有失败路径的脚本，通常只适合在作者机器上跑。</p></div>
+      <div class="card"><div class="card-title">第 5 遍 · 用自己的话复述</div><p>写 5 行伪代码，不看源码。能复述出「从哪开始、什么时候停、失败记什么」，才算真的读懂。</p></div>
+      <div class="card"><div class="card-title">最后 · 改一个小需求</div><p>比如加一个 dry-run、加一种过滤条件。改得动，说明结构被你掌握了；改不动，回到第 2 遍。</p></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <span class="kicker">TEARDOWNS</span>
+        <h2>6 个脚本，6 种逻辑模式</h2>
+        <p>每张卡片都可以展开：需求拆解、逻辑流程、完整代码、逐段讲解、逻辑写错会怎样、可复用点。</p>
+      </div>
+    </div>
+
+    <div class="filters">
+      <button class="chip active" type="button" data-scfilter="all">全部 6 个</button>
+      <button class="chip" type="button" data-scfilter="文件">文件自动化</button>
+      <button class="chip" type="button" data-scfilter="数据">数据处理</button>
+      <button class="chip" type="button" data-scfilter="网络">网络请求</button>
+    </div>
+
+    <div id="scriptMount"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <span class="kicker">TEMPLATES</span>
+        <h2>三份可以直接改的模板</h2>
+        <p>模板只保留结构，不含业务。先跑通骨架，再把你的需求填进去，比从空文件开始快得多。</p>
+      </div>
+    </div>
+    <div class="grid g3">
+      <a class="gh-card" href="scripts/template_cli.py"><span class="star">PY</span><div><b>template_cli.py</b><span>argparse + dry-run + 退出码，适合任何一次性脚本</span></div></a>
+      <a class="gh-card" href="scripts/template_pipeline.py"><span class="star">PY</span><div><b>template_pipeline.py</b><span>生成器流水线 + 好坏分流 + 计数摘要</span></div></a>
+      <a class="gh-card" href="scripts/template_resume.py"><span class="star">PY</span><div><b>template_resume.py</b><span>checkpoint + 重试 + 幂等，适合长任务</span></div></a>
+    </div>
+    <div class="callout info" style="margin-top:18px">
+      <div class="co-ico">i</div>
+      <div><div class="callout-t">怎么用模板</div><div class="callout-b">复制一份改名，先不改结构，只改「输入、处理、输出」三个位置。跑通之后再拆函数，不要一上来就重构。</div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <span class="kicker">READ MORE</span>
+        <h2>去哪找更多优秀脚本</h2>
+        <p>挑短脚本读，一个文件只学一个结构。不要一上来读框架源码。</p>
+      </div>
+    </div>
+    <div class="gh-grid" id="scriptRepos"></div>
+  </section>
+
+  <section class="section">
+    <div class="card reveal" style="padding:28px 30px">
+      <div class="card-title">一个练习建议：给旧脚本做「结构体检」</div>
+      <p style="color:var(--muted);font-size:14px;margin-top:8px">找一段你自己写过的脚本，按六段结构逐项打勾：入口、输入校验、计划、执行、记录、收尾。缺哪段就补哪段，不要重写。补完再跑一遍，你会有两个感受：代码变长了，但心里踏实了。</p>
+      <div class="reuse" style="margin-bottom:0">
+        <span class="tag tag-lime">先补失败路径</span>
+        <span class="tag tag-lime">再加 dry-run</span>
+        <span class="tag tag-lime">最后拆纯函数</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div>
+      <b>PyForge · Python 内功修炼场</b>
+      脚本拆解为原创内容，参考 GitHub 公开脚本合集与《Python编程快速上手》的自动化思路，未复制原代码。
+    </div>
+    <div>
+      <b>继续</b>
+      <a href="learn.html">12 章课程</a><a href="practice.html">练习题库</a><a href="books.html">配套书单</a>
+    </div>
+  </div>
+</footer>
+
+<script src="data/scripts.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
