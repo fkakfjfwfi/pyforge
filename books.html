@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>书单 · 16 本 Python 精选书与 GitHub 仓库 | PyForge</title>
+<meta name="description" content="按入门、进阶、工程、底层、爬虫分类的 Python 书单，来自图灵社区与豆瓣高分书目，附阅读顺序与本站对应章节。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="books">
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="index.html">
+      <span class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M8 4L4 12l4 8M16 4l4 8-4 8" stroke="#37e0ff" stroke-width="2"/><circle cx="12" cy="12" r="2.2" fill="#8b6cff"/></svg>
+      </span>
+      <span class="logo-text">PyForge<small>PYTHON TRAINING</small></span>
+    </a>
+    <button class="nav-toggle" type="button" aria-label="打开菜单">☰</button>
+    <div class="nav-links">
+      <a href="index.html">首页</a>
+      <a href="learn.html">12 章课程</a>
+      <a href="books.html">书单</a>
+      <a href="videos.html">视频精讲</a>
+      <a href="practice.html">练习</a>
+      <a class="nav-cta" href="learn.html#ch01">开始学习</a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="page-head">
+    <span class="eyebrow">LIBRARY · BOOKS</span>
+    <h1>书不用多，<span class="grad">按阶段读对 5 本就够</span></h1>
+    <p>这里的书目来自图灵社区、豆瓣与作者公开页面，覆盖入门、进阶、工程、底层与爬虫五个方向。每本都标注了「适合谁、怎么读、对应本站哪几章」，避免买回来吃灰。</p>
+  </div>
+
+  <section class="section" style="padding-top:10px">
+    <div class="filters">
+      <button class="chip active" type="button" data-filter="all">全部 16 本</button>
+      <button class="chip" type="button" data-filter="入门">入门</button>
+      <button class="chip" type="button" data-filter="进阶">进阶</button>
+      <button class="chip" type="button" data-filter="工程">工程</button>
+      <button class="chip" type="button" data-filter="底层">底层</button>
+      <button class="chip" type="button" data-filter="爬虫">爬虫</button>
+      <button class="chip" type="button" data-filter="速查">速查</button>
+    </div>
+
+    <div class="book-grid" id="bookGrid"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div>
+        <span class="kicker">GITHUB · OPEN SOURCE</span>
+        <h2>GitHub 上的优质开源教材</h2>
+        <p>仓库的优势是免费、可运行、更新快。适合作为书的补充：一边读概念，一边把示例代码跑起来。</p>
+      </div>
+    </div>
+    <div class="gh-grid" id="ghGrid"></div>
+  </section>
+
+  <section class="section">
+    <div class="card reveal" style="padding:26px 28px">
+      <div class="card-title">怎么安排阅读顺序</div>
+      <div class="grid g2" style="margin-top:14px">
+        <div>
+          <div style="font-size:13px;color:var(--cyan);font-family:var(--mono);margin-bottom:8px">IF 你的基础还不稳</div>
+          <p style="font-size:13.5px;color:var(--muted)">
+            《Python编程：从入门到实践》快速过一遍 → 《Python编程轻松进阶》补断层 → 再回本站第 1–6 章对照练习。
+          </p>
+        </div>
+        <div>
+          <div style="font-size:13px;color:var(--lime);font-family:var(--mono);margin-bottom:8px">IF 你想尽快提升爬虫能力</div>
+          <p style="font-size:13.5px;color:var(--muted)">
+            《流畅的Python》第 1/5/6/14 章 → 《Python 3网络爬虫开发实战》第 2–7 章 → 本站第 7–9 章（生成器/并发/异步）。
+          </p>
+        </div>
+        <div>
+          <div style="font-size:13px;color:var(--amber);font-family:var(--mono);margin-bottom:8px">IF 你已经开始写项目</div>
+          <p style="font-size:13.5px;color:var(--muted)">
+            《Python工匠》→ 《Architecture Patterns with Python》→ 《Python Testing with pytest》，同时把项目按第 10 章的结构重构。
+          </p>
+        </div>
+        <div>
+          <div style="font-size:13px;color:var(--violet);font-family:var(--mono);margin-bottom:8px">IF 你想弄懂「为什么」</div>
+          <p style="font-size:13.5px;color:var(--muted)">
+            《CPython设计与实现》→ 《Python源码剖析》（选读）→ 对照 CPython 源码看 dict、引用计数与 GIL 的实现。
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div>
+      <b>PyForge · Python 内功修炼场</b>
+      书单仅为学习建议，链接指向图灵社区、豆瓣、出版社或作者官方页面。购买前请核对版本与译者。
+    </div>
+    <div>
+      <b>继续</b>
+      <a href="learn.html">12 章课程</a><a href="videos.html">视频精讲</a><a href="practice.html">练习题库</a>
+    </div>
+  </div>
+</footer>
+
+<script src="data/books.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
