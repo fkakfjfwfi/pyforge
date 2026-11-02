@@ -32,10 +32,43 @@
 
 <div class="wrap">
   <div class="page-head">
-    <span class="eyebrow">SCRIPT LAB · 6 TEARDOWNS</span>
+    <span class="eyebrow">SCRIPT LAB · 6 TEARDOWNS + 9 LIVE LABS</span>
     <h1>觉得自己的脚本「没逻辑」，<span class="grad">通常不是语法问题</span></h1>
-    <p>别人的脚本能跑、能改、能重跑；你的脚本也能跑，但改一处就崩、跑第二遍就出错。差别往往在结构：先计划还是先动手、失败时留下什么、什么时候该停。下面 6 个脚本把这些问题拆开讲。</p>
+    <p>别人的脚本能跑、能改、能重跑；你的脚本也能跑，但改一处就崩、跑第二遍就出错。差别往往在结构：先计划还是先动手、失败时留下什么、什么时候该停。下面 6 个脚本把这些问题拆开讲，并且可以直接改参数运行。</p>
   </div>
+
+  <section class="section" id="labMount" style="padding-top:6px">
+    <div class="section-head">
+      <div>
+        <span class="kicker">LIVE LAB</span>
+        <h2>改参数，直接跑起来</h2>
+        <p>不用装 Python、不用配环境。选一个实验，改参数，点运行；代码在浏览器沙箱里执行，只读写临时虚拟文件系统。</p>
+      </div>
+    </div>
+    <div class="lab-shell">
+      <aside class="card lab-panel">
+        <select id="labSelect" class="lab-select" aria-label="选择实验"></select>
+        <p class="lab-desc" id="labDesc"></p>
+        <div id="labForm"></div>
+        <div class="lab-actions">
+          <button class="btn btn-primary" id="labRun" type="button">运行</button>
+          <button class="btn btn-ghost" id="labReset" type="button">重置</button>
+        </div>
+        <div class="lab-status" id="labStatus">未运行</div>
+        <div class="lab-hint">首次运行会下载约 10 MB 的 Python 运行时（Pyodide）。加载失败时可展开代码复制到本地运行；模板文件在 <code>scripts/</code> 目录。</div>
+      </aside>
+      <div>
+        <div class="lab-term">
+          <div class="lab-term-head"><span>OUTPUT</span><span>PYODIDE · PYTHON 3.12</span></div>
+          <pre id="labOut"></pre>
+        </div>
+        <details class="fold lab-code-fold">
+          <summary>查看本次实验的完整代码</summary>
+          <div id="labCode"></div>
+        </details>
+      </div>
+    </div>
+  </section>
 
   <section class="section" style="padding-top:6px">
     <div class="section-head">
@@ -149,6 +182,7 @@
 </footer>
 
 <script src="data/scripts.js"></script>
+<script src="data/labs.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>

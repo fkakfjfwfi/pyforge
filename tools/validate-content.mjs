@@ -52,6 +52,7 @@ const W = loadData([
   "data/chapters-1.js",
   "data/chapters-2.js",
   "data/scripts.js",
+  "data/labs.js",
   "data/practice.js",
   "data/books.js",
   "data/videos.js",
@@ -153,6 +154,39 @@ scripts.forEach((s, i) => {
   });
 });
 
+/* ---------------- 交互实验室 ---------------- */
+const labs = W.LABS || [];
+need(labs.length === 9, `实验室数量应为 9，实际 ${labs.length}`);
+const labIds = new Set();
+
+labs.forEach((lab, i) => {
+  const p = `lab[${i}](${(lab && lab.id) || "?"})`;
+  need(!labIds.has(lab.id), `${p}.id 重复`);
+  labIds.add(lab.id);
+  isStr(lab.title, `${p}.title 不能为空`);
+  isStr(lab.subtitle, `${p}.subtitle 不能为空`);
+  isStr(lab.setup, `${p}.setup 不能为空`);
+  isStr(lab.code, `${p}.code 不能为空`);
+  isArr(lab.params, `${p}.params 不能为空`);
+
+  const keys = new Set();
+  (lab.params || []).forEach((param, pi) => {
+    const pp = `${p}.params[${pi}]`;
+    isStr(param.key, `${pp}.key 不能为空`);
+    need(!keys.has(param.key), `${pp}.key 重复: ${param.key}`);
+    keys.add(param.key);
+    isStr(param.label, `${pp}.label 不能为空`);
+    need(["text", "number", "checkbox", "select"].includes(param.type), `${pp}.type 非法`);
+    if (param.type === "select") {
+      isArr(param.options, `${pp}.options 不能为空`, 2);
+      need(param.options.some((o) => o.value === param.value), `${pp}.value 不在 options 中`);
+    }
+    if (param.type === "number") {
+      need(typeof param.value === "number" && !Number.isNaN(param.value), `${pp}.value 应为数字`);
+    }
+  });
+});
+
 /* ---------------- 练习 ---------------- */
 const exercises = W.EXERCISES || [];
 need(exercises.length === 19, `练习数量应为 19，实际 ${exercises.length}`);
@@ -225,6 +259,7 @@ pages.forEach((page) => {
 const stats = [
   ["章节", chapters.length],
   ["脚本", scripts.length],
+  ["实验", labs.length],
   ["练习", exercises.length],
   ["书籍", books.length],
   ["视频", videos.length],

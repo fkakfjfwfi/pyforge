@@ -500,6 +500,155 @@
     observeReveal();
   }
 
+  /* ---------------- 交互实验室（Pyodide） ---------------- */
+  function initLab() {
+    var shell = $("#labMount");
+    if (!shell) return;
+    var labs = window.LABS || [];
+    if (!labs.length) return;
+
+    var select = $("#labSelect");
+    var form = $("#labForm");
+    var term = $("#labOut");
+    var desc = $("#labDesc");
+    var statusEl = $("#labStatus");
+    var runBtn = $("#labRun");
+    var resetBtn = $("#labReset");
+    var codeBox = $("#labCode");
+    var current = labs[0];
+    var runtime = null;
+    var runtimePromise = null;
+    var running = false;
+
+    function write(text, cls) {
+      var span = document.createElement("span");
+      if (cls) span.className = cls;
+      span.textContent = text;
+      term.appendChild(span);
+      term.scrollTop = term.scrollHeight;
+    }
+    function clear() { term.textContent = ""; }
+    function setStatus(text, tone) {
+      statusEl.textContent = text;
+      statusEl.className = "lab-status" + (tone ? " " + tone : "");
+    }
+
+    function fieldHTML(p) {
+      var label = "<label>" + p.label + "</label>";
+      if (p.type === "checkbox") {
+        return '<div class="lab-check"><input type="checkbox" data-key="' + p.key + '"' +
+          (p.value ? " checked" : "") + "><span>" + p.label + "</span></div>";
+      }
+      if (p.type === "number") {
+        return '<div class="lab-field">' + label + '<input type="number" data-key="' + p.key +
+          '" value="' + p.value + '" min="' + (p.min != null ? p.min : "") +
+          '" max="' + (p.max != null ? p.max : "") +
+          '" step="' + (p.step != null ? p.step : 1) + '"></div>';
+      }
+      if (p.type === "select") {
+        return '<div class="lab-field">' + label + '<select data-key="' + p.key + '">' +
+          p.options.map(function (o) {
+            return '<option value="' + o.value + '"' + (o.value === p.value ? " selected" : "") + ">" + o.label + "</option>";
+          }).join("") + "</select></div>";
+      }
+      return '<div class="lab-field">' + label + '<input type="text" data-key="' + p.key +
+        '" value="' + p.value + '">' + (p.help ? '<span class="lab-help">' + p.help + "</span>" : "") + "</div>";
+    }
+
+    function values() {
+      var out = {};
+      $$("[data-key]", form).forEach(function (el) {
+        var key = el.getAttribute("data-key");
+        if (el.type === "checkbox") out[key] = el.checked;
+        else if (el.type === "number") out[key] = Number(el.value);
+        else out[key] = el.value;
+      });
+      return out;
+    }
+
+    function renderLab(lab) {
+      current = lab;
+      desc.textContent = lab.subtitle;
+      form.innerHTML = lab.params.map(fieldHTML).join("");
+      codeBox.innerHTML = PY.codeBlock({ x: lab.code, title: lab.id + ".py" });
+      clear();
+      setStatus("未运行", "");
+    }
+
+    function loadRuntime() {
+      if (runtime) return Promise.resolve(runtime);
+      if (runtimePromise) return runtimePromise;
+      setStatus("正在加载 Python 运行时（首次约 10 MB）…", "loading");
+      runtimePromise = new Promise(function (resolve, reject) {
+        var base = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
+        var script = document.createElement("script");
+        script.src = base + "pyodide.js";
+        script.onload = function () {
+          window.loadPyodide({ indexURL: base }).then(function (py) {
+            runtime = py;
+            py.setStdout({ batched: function (t) { write(t); } });
+            py.setStderr({ batched: function (t) { write(t, "err"); } });
+            resolve(py);
+          }).catch(function (err) {
+            runtimePromise = null;
+            reject(err);
+          });
+        };
+        script.onerror = function () {
+          runtimePromise = null;
+          reject(new Error("无法加载 Pyodide，请检查网络后重试"));
+        };
+        document.head.appendChild(script);
+      });
+      return runtimePromise;
+    }
+
+    async function runLab() {
+      if (running) return;
+      running = true;
+      runBtn.disabled = true;
+      clear();
+      setStatus("运行中…", "loading");
+      var started = performance.now();
+      try {
+        var py = await loadRuntime();
+        var params = values();
+        await py.runPythonAsync("import json, os, shutil");
+        await py.runPythonAsync("shutil.rmtree('/lab', ignore_errors=True); os.makedirs('/lab'); os.chdir('/lab')");
+        py.globals.set("_LAB_JSON", JSON.stringify(params));
+        await py.runPythonAsync("LAB_PARAMS = json.loads(_LAB_JSON)");
+        await py.runPythonAsync(current.setup);
+        await Promise.race([
+          py.runPythonAsync(current.code),
+          new Promise(function (_, reject) {
+            setTimeout(function () { reject(new Error("运行超过 25 秒，已停止等待")); }, 25000);
+          })
+        ]);
+        var cost = ((performance.now() - started) / 1000).toFixed(2);
+        write("\n[完成] 用时 " + cost + "s\n", "ok");
+        setStatus("完成 · " + cost + "s", "ok");
+      } catch (err) {
+        var msg = String((err && err.message) || err);
+        write("\n" + msg + "\n", "err");
+        setStatus("运行失败", "err");
+      } finally {
+        running = false;
+        runBtn.disabled = false;
+      }
+    }
+
+    labs.forEach(function (lab, i) {
+      var option = document.createElement("option");
+      option.value = String(i);
+      option.textContent = lab.title;
+      select.appendChild(option);
+    });
+    select.addEventListener("change", function () { renderLab(labs[Number(select.value)] || labs[0]); });
+    runBtn.addEventListener("click", runLab);
+    resetBtn.addEventListener("click", function () { renderLab(current); });
+    renderLab(current);
+  }
+
   /* ---------------- 练习 ---------------- */
   function initPractice() {
     var mount = $("#exerMount");
@@ -621,7 +770,7 @@
     if (page === "books") initBooks();
     if (page === "videos") initVideos();
     if (page === "practice") initPractice();
-    if (page === "scripts") initScripts();
+    if (page === "scripts") { initScripts(); initLab(); }
   });
 
   window.PY = {
