@@ -1,7 +1,6 @@
 __pycache__/
-*.py[cod]
+*.pyc
 .DS_Store
 Thumbs.db
-.venv/
-.trae-html-share-packages/
-.screenshots/
+.vscode/
+.idea/

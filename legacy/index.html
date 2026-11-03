@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PyForge · Python 内功修炼场 | 为爬虫补上 Python 基础</title>
+<meta name="description" content="12 章 Python 系统课，面向爬虫学习者的 Python 内功补强：对象模型、字符串与正则、装饰器、生成器、并发、asyncio、类型注解、测试与性能优化。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="home">
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="index.html">
+      <span class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M8 4L4 12l4 8M16 4l4 8-4 8" stroke="#37e0ff" stroke-width="2"/><circle cx="12" cy="12" r="2.2" fill="#8b6cff"/></svg>
+      </span>
+      <span class="logo-text">PyForge<small>PYTHON TRAINING</small></span>
+    </a>
+    <button class="nav-toggle" type="button" aria-label="打开菜单">☰</button>
+    <div class="nav-links">
+      <a href="index.html">首页</a>
+      <a href="learn.html">12 章课程</a>
+      <a href="scripts.html">脚本拆解</a>
+      <a href="books.html">书单</a>
+      <a href="videos.html">视频精讲</a>
+      <a href="practice.html">练习</a>
+      <a class="nav-cta" href="learn.html#ch01">开始学习</a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div>
+      <span class="eyebrow">CRAWLER × PYTHON FOUNDATION</span>
+      <h1>爬虫卡住你的，<span class="line2">往往不是反爬，是 Python 内功</span></h1>
+      <p class="hero-sub">
+        会写 <code>requests.get</code> 只是起点。真正决定你能否稳定抓十万条、能否在被封前定位问题、能否把脚本改造成项目的，是对象模型、字符串、生成器、并发与工程化这些底层能力。
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="learn.html#ch01">从第 1 章开始 →</a>
+        <a class="btn btn-ghost" href="#roadmap">查看 12 章路线</a>
+      </div>
+      <div class="hero-meta">
+        <div><b>12<span> 章</span></b>系统课程</div>
+        <div><b>9<span> 个</span></b>可交互实验</div>
+        <div><b>36<span> 题</span></b>章节自测</div>
+        <div><b>19<span> 题</span></b>动手练习</div>
+      </div>
+    </div>
+
+    <div class="term reveal">
+      <div class="term-head">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="term-title">spider/session.py — python3.11</span>
+      </div>
+      <div class="term-body">
+<span class="ln">1</span><span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass, field
+<span class="ln">2</span><span class="kw">from</span> typing <span class="kw">import</span> Optional
+<span class="ln">3</span>
+<span class="ln">4</span><span class="cmd">@dataclass</span>(slots=<span class="num">True</span>)
+<span class="ln">5</span><span class="kw">class</span> <span class="fn">Item</span>:
+<span class="ln">6</span>    title: <span class="fn">str</span>
+<span class="ln">7</span>    price: <span class="fn">float</span>
+<span class="ln">8</span>    tags: <span class="fn">list</span>[<span class="fn">str</span>] = field(default_factory=<span class="fn">list</span>)
+<span class="ln">9</span>    stock: Optional[<span class="fn">int</span>] = <span class="num">None</span>
+<span class="ln">10</span>
+<span class="ln">11</span><span class="cm"># 80 行之后，同一页数据在 12 个请求间流动</span>
+<span class="ln">12</span><span class="kw">async def</span> <span class="fn">crawl</span>(urls: <span class="fn">list</span>[<span class="fn">str</span>]) -> <span class="fn">list</span>[Item]:
+<span class="ln">13</span>    sem = asyncio.<span class="fn">Semaphore</span>(<span class="num">20</span>)
+<span class="ln">14</span>    <span class="kw">async with</span> session.<span class="fn">get</span>(url) <span class="kw">as</span> resp:
+<span class="ln">15</span>        <span class="kw">yield</span> <span class="fn">parse</span>(<span class="kw">await</span> resp.<span class="fn">text</span>())
+      </div>
+      <div class="term-foot"><span>gIL · asyncio · dataclass</span><span class="pulse">● 内功加载中</span></div>
+    </div>
+  </section>
+
+  <!-- 痛点 -->
+  <section class="section reveal" id="pain">
+    <div class="section-head">
+      <div>
+        <span class="kicker">WHY THIS SITE</span>
+        <h2>这些场景，是不是你的日常？</h2>
+        <p>语法看过一遍，但一到真实项目就卡住——问题通常不在爬虫库，而在 Python 本身。</p>
+      </div>
+    </div>
+    <div class="grid g2">
+      <div class="pain"><span class="ico">!</span><div><b>「我明明没改它，它怎么变了？」</b><span>可变对象在函数、默认参数、类属性之间共享。不懂名字绑定，永远查不出污染源。</span></div></div>
+      <div class="pain"><span class="ico">!</span><div><b>「10 万条 URL 去重，跑了 20 分钟」</b><span>用 list 做成员判断是 O(n²)。换成 set，一秒结束——这是容器选型问题，不是机器问题。</span></div></div>
+      <div class="pain"><span class="ico">!</span><div><b>「一开并发就封 IP、内存爆」</b><span>缺少限速、信号量、异常收集与退避策略。并发不是把线程数调大。</span></div></div>
+      <div class="pain"><span class="ico">!</span><div><b>「报错只会 print，线上问题查不出来」</b><span>没有日志、没有断点、没有测试样本。页面一改版，解析静默返回空。</span></div></div>
+    </div>
+  </section>
+
+  <!-- 路线图 -->
+  <section class="section reveal" id="roadmap">
+    <div class="section-head">
+      <div>
+        <span class="kicker">CURRICULUM</span>
+        <h2>12 章，按「爬虫能力」倒推的知识路线</h2>
+        <p>不是把 Python 语法书抄一遍。每一章都从爬虫里的真实故障出发，讲清概念、给出代码、留练习。</p>
+      </div>
+      <a class="btn btn-ghost" href="learn.html">进入课程 →</a>
+    </div>
+    <div id="roadmapMount"></div>
+  </section>
+
+  <!-- 学习方法 -->
+  <section class="section reveal">
+    <div class="section-head">
+      <div>
+        <span class="kicker">HOW TO LEARN</span>
+        <h2>每章 90 分钟，别只看不敲</h2>
+        <p>视频和书只是输入。真正让能力长出来的是「手敲 + 改错 + 复述」。</p>
+      </div>
+    </div>
+    <div class="grid g3">
+      <div class="card"><span class="num-badge">01</span><div class="card-title">读概念 · 15 分钟</div><p>先读「为什么」：这个概念解决什么问题，不解决会怎样。跳过推导，直接看反例。</p></div>
+      <div class="card"><span class="num-badge">02</span><div class="card-title">敲代码 · 45 分钟</div><p>所有示例手敲一遍，改一个变量再跑。看懂和写对之间，差着一整条调试路径。</p></div>
+      <div class="card"><span class="num-badge">03</span><div class="card-title">做练习 · 30 分钟</div><p>先自己写，再对照参考答案。重点看差异：为什么它更短、更稳、更快。</p></div>
+    </div>
+    <div class="callout tip" style="margin-top:20px">
+      <div class="co-ico">✓</div>
+      <div><div class="callout-t">一个反直觉的建议</div><div class="callout-b">不要等「学完 Python」再开始爬虫。每学完一章，就用这一章的知识重构一小段现有代码。知识只有被用过，才会留下来。</div></div>
+    </div>
+  </section>
+
+  <!-- 资源 -->
+  <section class="section reveal">
+    <div class="section-head">
+      <div>
+        <span class="kicker">LIBRARY</span>
+        <h2>脚本、书单与视频，都已经帮你筛过一轮</h2>
+        <p>脚本学结构，书按阶段选，视频按主题看。不追求数量，追求「现在读得懂、读完用得上」。</p>
+      </div>
+    </div>
+    <div class="grid g3">
+      <a class="card" href="scripts.html" style="color:var(--text)">
+        <div class="card-title">6 个脚本拆解 + 9 个可运行实验</div>
+        <p>批量重命名、CSV 清洗、API 分页、日志统计、目录去重、增量同步。每个都附逻辑流程，还能在浏览器里改参数直接运行。</p>
+        <span class="card-link">打开脚本拆解 →</span>
+      </a>
+      <a class="card" href="books.html" style="color:var(--text)">
+        <div class="card-title">16 本精选书 + 7 个 GitHub 仓库</div>
+        <p>来自图灵社区与豆瓣高分书目，按入门 / 进阶 / 工程 / 底层 / 爬虫分类，每本都写了「什么时候读、怎么读」。</p>
+        <span class="card-link">打开书单 →</span>
+      </a>
+      <a class="card" href="videos.html" style="color:var(--text)">
+        <div class="card-title">10 门视频课，附带内化笔记</div>
+        <p>小甲鱼、嵩天、黑马、Corey Schafer、freeCodeCamp、ArjanCodes……每门课提炼了 4 条核心知识点，并标注对应章节。</p>
+        <span class="card-link">打开视频精讲 →</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- 进度 -->
+  <section class="section reveal">
+    <div class="card" style="display:flex;align-items:center;gap:26px;flex-wrap:wrap;padding:28px 30px">
+      <div style="flex:1;min-width:240px">
+        <div class="kicker" style="margin-bottom:6px">YOUR PROGRESS</div>
+        <h2 style="font-size:22px">学习进度保存在本地</h2>
+        <p style="color:var(--muted);font-size:14px;margin-top:8px">完成章节时点「标记已学完」，首页和目录会自动更新。换浏览器或清缓存会丢失。</p>
+      </div>
+      <div style="text-align:right">
+        <div id="homeProgress" style="font-family:var(--mono);font-size:38px;font-weight:700;color:var(--cyan)">0%</div>
+        <div id="homeProgressText" style="font-size:12px;color:var(--dim)">0 / 12 章已完成</div>
+      </div>
+      <a class="btn btn-primary" id="continueLink" href="learn.html#ch01"><span id="continueLabel">从第 1 章开始</span></a>
+    </div>
+  </section>
+
+</div>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div>
+      <b>PyForge · Python 内功修炼场</b>
+      为爬虫学习者重排的 Python 基础课。内容参考 Python 官方文档、图灵社区书目与公开课程，链接均指向原始页面。
+    </div>
+    <div>
+      <b>导航</b>
+      <a href="learn.html">课程</a><a href="scripts.html">脚本</a><a href="books.html">书单</a><a href="videos.html">视频</a><a href="practice.html">练习</a>
+    </div>
+  </div>
+</footer>
+
+<script src="data/chapters-1.js"></script>
+<script src="data/chapters-2.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
