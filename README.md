@@ -9,12 +9,13 @@
 ## 包含什么
 
 - 4 个模块、14 节课：基础重塑 → 中级核心 → 进阶 → 实战
-- 58 个动手任务：43 道编码题 + 15 道概念自测
+- 58 个课程练习：43 道编码题 + 15 道概念自测
+- 5 个简历级项目、20 个项目检查点：记账 CLI、日志 ETL、迷你搜索引擎、异步爬虫调度器、FastAPI 任务 API
 - 浏览器内真实 Python 3.13（Pyodide + Web Worker），代码不上传
 - 断言判题、提示、参考答案、10 秒超时保护
-- 进度保存在 localStorage：练习通过、课程通关、连续学习天数
+- 进度保存在 localStorage：练习通过、课程通关、项目进度、连续学习天数
 - 15 本参考书 / 开源仓库（图灵社区、GitHub、官方文档）
-- 12 类可搜索速查表 + 自由练习场
+- 12 类可搜索速查表 + 自由练习场（含 SQLite 示例）
 
 ## 本地运行
 
@@ -35,11 +36,16 @@ serve.py                   本地服务器
 assets/css/style.css       视觉系统与响应式布局
 assets/js/app.js           路由、渲染、进度、判题交互
 assets/js/pyworker.js      Pyodide Web Worker 运行时
-assets/js/data/            课程与书单数据（改内容主要改这里）
+assets/js/data/            课程、项目与书单数据（改内容主要改这里）
   module-foundations.js
   module-intermediate.js
   module-advanced.js
   module-projects.js
+  project-ledger.js        # 项目 01 记账 CLI
+  project-loglab.js        # 项目 02 日志 ETL
+  project-search.js        # 项目 03 迷你搜索引擎
+  project-crawler.js       # 项目 04 异步爬虫调度器
+  project-api.js           # 项目 05 FastAPI 任务 API
   books.js
   cheatsheet.js
 ```
@@ -87,6 +93,25 @@ print("通过：…")
 
 改完 `assets/js/data/*.js` 后刷新页面即可。若修改了 `pyworker.js`，请同时更新 `app.js` 里的 `pyworker.js?v=...` 版本号，避免浏览器继续使用缓存的 Worker 脚本。
 
+## 修改项目工坊
+
+项目数据在 `assets/js/data/project-*.js`，结构与课程类似，但多了里程碑与完整参考实现：
+
+```js
+{
+  id: "ledger-cli",
+  type: "project",
+  title: "记账 CLI",
+  milestones: [{ title: "M1 …", desc: "…", exIds: ["pr1-1"] }],
+  exercises: [ /* 检查点，字段同课程练习 */ ],
+  files: [{ name: "ledger.py", code: "…", lang: "python", note: "…" }],
+  resume: { keywords: ["…"], bullets: ["…"] },
+  refs: [{ name: "…", url: "…", why: "…" }]
+}
+```
+
+`files` 里的代码会渲染成可展开的下载卡片；新增项目时记得在 `index.html` 里引入对应脚本，并让 `ex.id` 全局唯一（进度按 id 记录）。
+
 ## 部署
 
 仓库推送到 `main` 后，GitHub Pages 直接从仓库根目录发布（已包含 `.nojekyll`）。
@@ -101,14 +126,16 @@ GitHub Pages 的发布通常需要几十秒；在仓库 Actions / Pages 页面�
 | 依赖 | 版本 | 来源 |
 | --- | --- | --- |
 | Pyodide | 0.29.5 | jsDelivr CDN |
+| Pyodide sqlite3 包 | 1.0.0 | 首次运行由 Worker 加载 |
 | CodeMirror | 5.65.16 | jsDelivr CDN |
 
-首次运行会下载约 10MB 的 Python 运行时，之后使用浏览器缓存。离线环境下练习不可用。
+首次运行会下载约 10MB 的 Python 运行时，并额外加载 sqlite3 包；之后使用浏览器缓存。离线环境下练习不可用。
 
 ## 已知限制
 
 - 不支持 `input()` 交互输入，练习使用预置数据
-- 只提供标准库，第三方库（requests、numpy 等）不可用
+- 浏览器里只提供标准库与 sqlite3；第三方库（requests、numpy、FastAPI 等）不可用
+- FastAPI 项目在浏览器里只验证仓储层与响应契约，完整 API 需要本地运行
 - 进度只保存在当前浏览器，换设备不同步
 - 判题基于断言，只验证行为，不检查实现方式
 

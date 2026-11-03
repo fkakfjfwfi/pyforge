@@ -14,7 +14,13 @@ function boot() {
   importScripts(PYODIDE_BASE + "pyodide.js");
 
   pyodidePromise = loadPyodide({ indexURL: PYODIDE_BASE })
-    .then((py) => {
+    .then(async (py) => {
+      // sqlite3 是 Pyodide 的可选包，项目工坊里的 SQLite 检查点需要它。
+      try {
+        await py.loadPackage("sqlite3");
+      } catch (e) {
+        // 加载失败不阻塞其他课程；SQLite 相关检查点会在运行时报错。
+      }
       self.postMessage({ type: "status", status: "ready" });
       return py;
     })

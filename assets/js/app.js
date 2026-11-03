@@ -8,6 +8,8 @@
   const ALL_LESSONS = MODULES.flatMap((m) =>
     m.lessons.map((l) => Object.assign({}, l, { moduleId: m.id, moduleTitle: m.title, accent: m.accent }))
   );
+  const PROJECTS = window.PROJECTS || [];
+  const fileRegistry = new Map();
   const STORE_KEY = "pyforge.progress.v1";
   const app = document.getElementById("app");
   const toastStack = document.getElementById("toast-stack");
@@ -95,9 +97,12 @@
   }
 
   function overallStats() {
-    const total = ALL_LESSONS.reduce((n, l) => n + l.exercises.length, 0);
+    const lessonTotal = ALL_LESSONS.reduce((n, l) => n + l.exercises.length, 0);
+    const projectTotal = PROJECTS.reduce((n, p) => n + p.exercises.length, 0);
+    const total = lessonTotal + projectTotal;
     const done = Object.keys(progress.done).length;
     const lessonsDone = ALL_LESSONS.filter((l) => lessonStats(l).done === l.exercises.length).length;
+    const projectsDone = PROJECTS.filter((p) => lessonStats(p).done === p.exercises.length).length;
     // 连续学习天数
     let streak = 0;
     const d = new Date();
@@ -108,7 +113,16 @@
         d.setDate(d.getDate() - 1);
       } else break;
     }
-    return { total, done, pct: total ? Math.round((done / total) * 100) : 0, lessonsDone, streak };
+    return {
+      total,
+      done,
+      pct: total ? Math.round((done / total) * 100) : 0,
+      lessonsDone,
+      projectsDone,
+      lessonTotal,
+      projectTotal,
+      streak,
+    };
   }
 
   function toast(message, type) {
@@ -133,6 +147,12 @@
   }
   function firstUnfinished() {
     return ALL_LESSONS.find((l) => lessonStats(l).done < l.exercises.length) || ALL_LESSONS[0];
+  }
+  function findProject(id) {
+    return PROJECTS.find((p) => p.id === id);
+  }
+  function projectIndexGlobal(id) {
+    return PROJECTS.findIndex((p) => p.id === id);
   }
 
   /* ------------------------------------------------------------------
@@ -232,11 +252,12 @@
     return `<div class="codeblock">
       <div class="code-head">
         <span class="dots"><i></i><i></i><i></i></span>
-        <span class="lang">python</span>
+        <span class="lang">${opts.lang || "python"}</span>
         ${opts.file ? `<span class="file">${esc(opts.file)}</span>` : ""}
+        ${opts.downloadKey ? `<button class="copy" type="button" data-download="${opts.downloadKey}">下载</button>` : ""}
         <button class="copy" type="button" data-copy>复制</button>
       </div>
-      <div class="code-body"><div class="gutter">${gutter}</div><pre><code>${highlightPython(code)}</code></pre></div>
+      <div class="code-body"><div class="gutter">${gutter}</div><pre><code>${opts.plain ? esc(code) : highlightPython(code)}</code></pre></div>
       ${out}
     </div>`;
   }
@@ -275,7 +296,7 @@
     init() {
       if (this.readyPromise) return this.readyPromise;
       this.setStatus("loading");
-      this.worker = new Worker("assets/js/pyworker.js?v=7");
+      this.worker = new Worker("assets/js/pyworker.js?v=8");
       this.readyPromise = new Promise((resolve, reject) => {
         this.readyResolve = resolve;
         this.readyReject = reject;
@@ -382,7 +403,13 @@
           case "p":
             return `<p>${s.html}</p>`;
           case "code":
-            return codeBlock(s.code, { file: s.file, output: s.output });
+            return codeBlock(s.code, {
+              file: s.file,
+              output: s.output,
+              lang: s.lang,
+              plain: s.plain,
+              downloadKey: s.downloadKey,
+            });
           case "list":
             return `<ul>${s.items.map((item) => `<li>${item}</li>`).join("")}</ul>`;
           case "table":
@@ -411,11 +438,11 @@
     return `<span class="ex-status ${done ? "pass" : ""}">${done ? "已通过" : "未完成"}</span>`;
   }
 
-  function renderCodeExercise(ex, index) {
+  function renderCodeExercise(ex, index, label) {
     const done = isDone(ex.id);
     return `<article class="exercise ${done ? "passed" : ""}" id="ex-${ex.id}" data-ex="${ex.id}">
       <div class="ex-head">
-        <span class="ex-badge">练习 ${pad2(index)}</span>
+        <span class="ex-badge">${label || "练习"} ${pad2(index)}</span>
         <span class="ex-title">${ex.title}</span>
         <span class="ex-diff">${ex.difficulty || "★★☆"}</span>
         ${exerciseStatusMarkup(ex)}
@@ -515,17 +542,18 @@ print(you.practice(25))`;
     app.innerHTML = `<div class="page">
       <section class="hero">
         <div>
-          <span class="eyebrow">Python · 14 lessons · 50+ exercises</span>
+          <span class="eyebrow">Python · ${ALL_LESSONS.length} lessons · ${PROJECTS.length} projects</span>
           <h1>不再“看过”，<br>而是<span class="mark">真的写会</span>。</h1>
           <p class="hero-lead">为有一点基础、却总在同一个地方卡住的你准备。讲解只占 <strong>45%</strong>，剩下 <strong>55%</strong> 是可直接运行的练习——真实 Python 解释器跑在你的浏览器里。</p>
           <div class="hero-actions">
             <a class="btn btn-primary btn-lg" href="#/lesson/${next.id}">${nextStats.done ? "继续学习" : "从第一课开始"} <span aria-hidden="true">→</span></a>
-            <a class="btn btn-outline btn-lg" href="#/books">先看参考书单</a>
+            <a class="btn btn-outline btn-lg" href="#/projects">进入项目工坊</a>
+            <a class="btn btn-ghost btn-lg" href="#/books">参考书单</a>
           </div>
           <div class="hero-meta">
             <span><b>${ALL_LESSONS.length}</b> 节精讲</span>
-            <span><b>${stats.total}</b> 道练习 / 自测</span>
-            <span><b>4</b> 个模块：基础 → 中级 → 进阶 → 实战</span>
+            <span><b>${PROJECTS.length}</b> 个简历项目</span>
+            <span><b>${stats.total}</b> 个练习 / 检查点</span>
             <span><b>0</b> 依赖安装</span>
           </div>
         </div>
@@ -543,7 +571,7 @@ print(you.practice(25))`;
 
       <section class="stat-strip">
         <div class="stat"><b>${stats.done}</b><span>已完成练习</span></div>
-        <div class="stat"><b>${stats.lessonsDone}</b><span>已通关课程</span></div>
+        <div class="stat"><b>${stats.lessonsDone} / ${stats.projectsDone}</b><span>通关课程 / 项目</span></div>
         <div class="stat"><b>${stats.pct}%</b><span>总进度</span></div>
         <div class="stat"><b>${stats.streak}</b><span>连续学习天数</span></div>
       </section>
@@ -561,6 +589,18 @@ print(you.practice(25))`;
           <div class="daily-txt"><b>不知道从哪开始？</b> 随机抽一道还没通过的题，直接练手。</div>
           <button class="btn btn-outline" type="button" id="random-ex">随机一题 →</button>
         </div>
+      </section>
+
+      <section style="margin-top:64px">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Project Lab · 简历级实战</span>
+            <h2>把知识点做成能展示的项目</h2>
+            <p>不是 Todo List 复刻。每个项目都有明确需求、分阶段里程碑、可运行的核心逻辑和完整参考实现，最后附简历写法与扩展方向。</p>
+          </div>
+          <a class="btn btn-outline" href="#/projects">全部 ${PROJECTS.length} 个项目 →</a>
+        </div>
+        <div class="project-grid">${PROJECTS.map(projectCardMarkup).join("")}</div>
       </section>
 
       <section style="margin-top:64px">
@@ -593,13 +633,17 @@ print(you.practice(25))`;
     </div>`;
 
     document.querySelector("#random-ex").addEventListener("click", () => {
-      const pool = ALL_LESSONS.flatMap((l) => l.exercises.filter((e) => !isDone(e.id)).map((e) => ({ lesson: l, ex: e })));
+      const pool = [
+        ...ALL_LESSONS.flatMap((l) => l.exercises.filter((e) => !isDone(e.id)).map((e) => ({ unit: l, type: "lesson", ex: e }))),
+        ...PROJECTS.flatMap((p) => p.exercises.filter((e) => !isDone(e.id)).map((e) => ({ unit: p, type: "project", ex: e }))),
+      ];
       if (!pool.length) {
         toast("所有练习都通过了，去练习场自由发挥吧。");
         return;
       }
       const pick = pool[Math.floor(Math.random() * pool.length)];
-      location.hash = `#/lesson/${pick.lesson.id}?focus=${pick.ex.id}`;
+      location.hash =
+        pick.type === "project" ? `#/project/${pick.unit.id}?focus=${pick.ex.id}` : `#/lesson/${pick.unit.id}?focus=${pick.ex.id}`;
     });
   }
 
@@ -699,6 +743,291 @@ print(you.practice(25))`;
     });
 
     // 聚焦某道题（来自“随机一题”）
+    const focus = params && params.get("focus");
+    if (focus) {
+      const target = document.getElementById("ex-" + focus);
+      if (target) {
+        setTimeout(() => {
+          target.scrollIntoView({ behavior: "smooth", block: "center" });
+          target.style.boxShadow = "0 0 0 2px var(--blue)";
+          setTimeout(() => (target.style.boxShadow = ""), 1600);
+          const btn = target.querySelector('[data-act="run"]');
+          if (btn) btn.focus({ preventScroll: true });
+        }, 120);
+      }
+    } else {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+  }
+
+  /* ------------------------------------------------------------------
+     项目工坊
+     ------------------------------------------------------------------ */
+  function projectCardMarkup(p) {
+    const s = lessonStats(p);
+    return `<a class="project-card" href="#/project/${p.id}" style="--accent:${p.accent}">
+      <div class="project-card-top">
+        <span class="project-index">PROJECT ${p.index}</span>
+        <span class="project-mode ${p.mode}">${p.modeLabel}</span>
+      </div>
+      <h3>${p.title}</h3>
+      <p class="project-sub">${p.subtitle}</p>
+      <p class="project-sum">${p.summary}</p>
+      <div class="stack-pills">${p.stack.slice(0, 4).map((x) => `<span>${x}</span>`).join("")}</div>
+      <div class="project-card-foot">
+        <span class="project-progress"><i style="width:${s.pct}%"></i></span>
+        <span class="project-pct">${s.done}/${s.total}</span>
+      </div>
+      <div class="project-resume">${p.resumeLine}</div>
+    </a>`;
+  }
+
+  function renderProjects() {
+    const checkpoints = PROJECTS.reduce((n, p) => n + p.exercises.length, 0);
+    const completed = PROJECTS.filter((p) => lessonStats(p).done === p.exercises.length).length;
+    const generalRefs = [
+      {
+        name: "practical-tutorials/project-based-learning",
+        url: "https://github.com/practical-tutorials/project-based-learning",
+        why: "按语言和技术栈索引的项目式教程清单，适合找练手题目。",
+      },
+      {
+        name: "MunGell/awesome-for-beginners",
+        url: "https://github.com/MunGell/awesome-for-beginners",
+        why: "对新手友好的开源项目清单，可以练习读别人的代码与提 PR。",
+      },
+      {
+        name: "vinta/awesome-python",
+        url: "https://github.com/vinta/awesome-python",
+        why: "Python 生态总览，做项目选库时先来这里看社区选择。",
+      },
+    ];
+
+    app.innerHTML = `<div class="page">
+      <span class="eyebrow">Project Lab · ${PROJECTS.length} projects · ${checkpoints} checkpoints</span>
+      <div class="section-head">
+        <div>
+          <h2 style="font-size:34px">项目工坊</h2>
+          <p>从“会写函数”到“能交付一个项目”。每个项目都拆成 4 个里程碑，核心逻辑可以在浏览器里直接验证；完整参考实现可下载，本地跑起来就能放进 GitHub。</p>
+        </div>
+        <span class="side">${completed}/${PROJECTS.length} 已完成</span>
+      </div>
+
+      <div class="project-grid">${PROJECTS.map(projectCardMarkup).join("")}</div>
+
+      <section style="margin-top:48px">
+        <div class="section-head">
+          <div><h2>怎么用这些项目</h2><p>不要一次性复制完整代码。按里程碑写，写完一个检查点再进入下一个。</p></div>
+        </div>
+        <div class="path-grid">
+          <div class="module-card" style="--accent:var(--blue)">
+            <span class="module-index">STEP · 01</span>
+            <h3>先跑通核心逻辑</h3>
+            <p class="module-desc">每个检查点都是项目里真实存在的一小块：模型校验、SQL 聚合、TF-IDF 排序、重试逻辑。判题通过，说明这一块行为正确。</p>
+            <div class="lesson-chips">
+              <div class="lesson-chip"><span class="dot"></span><span>检查点可独立运行，不依赖上一题</span></div>
+              <div class="lesson-chip"><span class="dot"></span><span>参考答案通过后可以对照改写</span></div>
+            </div>
+          </div>
+          <div class="module-card" style="--accent:var(--amber)">
+            <span class="module-index">STEP · 02</span>
+            <h3>下载完整实现，补上工程外壳</h3>
+            <p class="module-desc">参考实现包含 CLI、测试、依赖与运行说明。把它放进自己的仓库，改数据、加命令、补 README，再截图写进简历。</p>
+            <div class="lesson-chips">
+              <div class="lesson-chip"><span class="dot"></span><span>每个项目都附“简历写法”和量化占位符</span></div>
+              <div class="lesson-chip"><span class="dot"></span><span>扩展方向足够你继续迭代两周</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section style="margin-top:48px">
+        <div class="section-head">
+          <div><h2>选题原则</h2><p>简历上的项目不在多，而在“能讲清楚问题、方案和结果”。</p></div>
+        </div>
+        <div class="callout warn" style="margin-top:0">
+          <span class="co-icon">!</span>
+          <p><span class="co-title">不要写“Todo List”</span>除非它真的有你自己的东西：权限、并发、审计日志、离线同步、性能数据。否则面试官很难从中问出有区分度的问题。这 5 个项目都刻意选了有明确技术主题的方向：数据建模、ETL、检索、异步调度、API 工程化。</p>
+        </div>
+        <div class="ref-list">
+          ${generalRefs
+            .map(
+              (r) => `<a class="ref-link" href="${r.url}" target="_blank" rel="noopener">
+                <b>${r.name}</b><span>${r.why}</span><i>↗</i>
+              </a>`
+            )
+            .join("")}
+        </div>
+      </section>
+    </div>`;
+  }
+
+  function projectFilesMarkup(p) {
+    return p.files
+      .map((f, i) => {
+        const key = `dl-${p.id}-${i}`;
+        fileRegistry.set(key, { filename: f.name, code: f.code });
+        return `<details class="file-card">
+          <summary>
+            <span class="file-name">${f.name}</span>
+            <span class="file-note">${f.note || ""}</span>
+            <span class="file-expand">展开</span>
+          </summary>
+          <div class="file-body">${codeBlock(f.code, {
+            file: f.name,
+            lang: f.lang || "python",
+            plain: f.plain,
+            downloadKey: key,
+          })}</div>
+        </details>`;
+      })
+      .join("");
+  }
+
+  function renderProject(projectId, params) {
+    const p = findProject(projectId);
+    if (!p) {
+      location.hash = "#/projects";
+      return;
+    }
+    const stats = lessonStats(p);
+    const globalIdx = projectIndexGlobal(p.id);
+    const prev = PROJECTS[globalIdx - 1];
+    const next = PROJECTS[globalIdx + 1];
+
+    progress.lessons[p.id] = { at: Date.now() };
+    progress.last = p.id;
+    touchDate();
+    saveProgress();
+
+    const milestoneSide = p.milestones
+      .map((m, i) => {
+        const done = m.exIds.every(isDone);
+        return `<div class="side-milestone ${done ? "done" : ""}" data-milestone data-ex-ids="${m.exIds.join(",")}">
+          <span class="idx">M${i + 1}</span><span>${m.title}</span>
+        </div>`;
+      })
+      .join("");
+
+    const milestones = p.milestones
+      .map((m, mi) => {
+        const exs = m.exIds.map((id) => p.exercises.find((e) => e.id === id)).filter(Boolean);
+        const done = m.exIds.every(isDone);
+        return `<div class="milestone ${done ? "done" : ""}" data-milestone data-ex-ids="${m.exIds.join(",")}">
+          <div class="milestone-head">
+            <span class="m-badge">M${mi + 1}</span>
+            <div><h3>${m.title}</h3><p>${m.desc}</p></div>
+            <span class="m-status ${done ? "pass" : ""}">${done ? "已通过" : "待完成"}</span>
+          </div>
+          ${exs.map((ex) => renderCodeExercise(ex, p.exercises.indexOf(ex) + 1, "检查点")).join("")}
+        </div>`;
+      })
+      .join("");
+
+    app.innerHTML = `<div class="lesson-layout project-layout" style="--accent:${p.accent}">
+      <aside class="sidebar">
+        <a class="sidebar-back" href="#/projects">← 项目工坊</a>
+        <p class="side-title">Project ${p.index}</p>
+        <p class="side-module-name">${p.title}</p>
+        <div class="side-milestones">${milestoneSide}</div>
+        <div class="side-progress">
+          <div class="bar"><i class="js-lesson-bar" style="width:${stats.pct}%"></i></div>
+          <div class="meta"><span>项目进度</span><span class="js-lesson-count">${stats.done}/${stats.total}</span></div>
+        </div>
+      </aside>
+
+      <div>
+        <header class="lesson-head project-head">
+          <div class="lesson-crumb">项目工坊<span class="sep">/</span>Project ${p.index}<span class="sep">/</span>${p.level}</div>
+          <h1>${p.title}</h1>
+          <p class="lesson-summary">${p.subtitle} — ${p.summary}</p>
+          <div class="meta-row">
+            <span class="meta-pill level">${p.level}</span>
+            <span class="meta-pill">${p.duration}</span>
+            <span class="meta-pill ratio">${p.modeLabel}</span>
+            <span class="meta-pill">${p.exercises.length} 个检查点 · ${p.milestones.length} 个里程碑</span>
+          </div>
+          <div class="stack-pills" style="margin-top:12px">${p.stack.map((x) => `<span>${x}</span>`).join("")}</div>
+        </header>
+
+        <section class="resume-card" style="--accent:${p.accent}">
+          <div class="resume-head">
+            <span class="eyebrow">RESUME VALUE</span>
+            <span class="resume-badge">可写进简历</span>
+          </div>
+          <p class="resume-line">${p.resumeLine}</p>
+          <div class="resume-keywords">${p.resume.keywords.map((k) => `<span>${k}</span>`).join("")}</div>
+          <ul>${p.highlights.map((h) => `<li>${h}</li>`).join("")}</ul>
+        </section>
+
+        <div class="prose">${renderSections(p.sections, p.accent)}</div>
+
+        <section class="proj-block">
+          <h2><span class="hn">01</span><span>架构与目录</span></h2>
+          <pre class="arch-tree">${esc(p.architecture.tree)}</pre>
+          <ul>${p.architecture.notes.map((n) => `<li>${n}</li>`).join("")}</ul>
+        </section>
+
+        <div class="practice-head">
+          <span class="badge">MILESTONES</span>
+          <h2>分阶段完成</h2>
+          <span class="ratio-note">按顺序写 · 每个检查点独立判题</span>
+        </div>
+        ${milestones}
+
+        <div class="practice-head">
+          <span class="badge">SOURCE</span>
+          <h2>完整参考实现</h2>
+          <span class="ratio-note">可展开 · 可复制 · 可下载</span>
+        </div>
+        <p class="block-lead">先自己写，再对照参考实现。文件里的注释标注了关键决策，不只是“能跑”。</p>
+        <div class="file-list">${projectFilesMarkup(p)}</div>
+
+        <section class="proj-block">
+          <h2><span class="hn">02</span><span>本地运行</span></h2>
+          ${codeBlock(p.localSetup.join("\n"), { file: "terminal", lang: "shell", plain: true })}
+          ${p.localNotes && p.localNotes.length ? `<ul>${p.localNotes.map((n) => `<li>${n}</li>`).join("")}</ul>` : ""}
+        </section>
+
+        <section class="proj-block">
+          <h2><span class="hn">03</span><span>写进简历</span></h2>
+          <div class="callout tip" style="margin-top:0">
+            <span class="co-icon">i</span>
+            <p><span class="co-title">把占位符换成你的真实数据</span>例如“处理 [N] 行日志、P95 耗时 [X] ms、测试覆盖 [Y] 个用例”。没有实测就删掉数字，不要编。</p>
+          </div>
+          <ul class="resume-bullets">${p.resume.bullets.map((b) => `<li>${b}</li>`).join("")}</ul>
+        </section>
+
+        <section class="proj-block">
+          <h2><span class="hn">04</span><span>继续扩展</span></h2>
+          <ul>${p.extensions.map((e) => `<li>${e}</li>`).join("")}</ul>
+        </section>
+
+        <section class="proj-block">
+          <h2><span class="hn">05</span><span>参考仓库与文档</span></h2>
+          <div class="ref-list">
+            ${p.refs
+              .map(
+                (r) => `<a class="ref-link" href="${r.url}" target="_blank" rel="noopener">
+                  <b>${r.name}</b><span>${r.why}</span><i>↗</i>
+                </a>`
+              )
+              .join("")}
+          </div>
+        </section>
+
+        <nav class="lesson-foot">
+          ${prev ? `<a class="next-card" href="#/project/${prev.id}"><small>← 上一个项目</small><b>${prev.title}</b></a>` : `<span></span>`}
+          ${next ? `<a class="next-card" href="#/project/${next.id}" style="text-align:right"><small>下一个项目 →</small><b>${next.title}</b></a>` : `<a class="next-card" href="#/projects" style="text-align:right"><small>全部项目</small><b>返回项目工坊</b></a>`}
+        </nav>
+      </div>
+    </div>`;
+
+    p.exercises.forEach((ex, i) => {
+      if (ex.kind === "quiz") bindQuiz(ex, p);
+      else initCodeExercise(ex, p, i);
+    });
+
     const focus = params && params.get("focus");
     if (focus) {
       const target = document.getElementById("ex-" + focus);
@@ -862,11 +1191,23 @@ print(you.practice(25))`;
     document.querySelectorAll(".js-lesson-count").forEach((el) => (el.textContent = `${s.done}/${s.total}`));
     const sideLink = document.querySelector(`.side-link[data-lesson="${lesson.id}"]`);
     if (sideLink && s.done === s.total) sideLink.classList.add("done");
+
+    document.querySelectorAll("[data-milestone]").forEach((el) => {
+      const ids = (el.dataset.exIds || "").split(",").filter(Boolean);
+      const done = ids.length > 0 && ids.every(isDone);
+      el.classList.toggle("done", done);
+      const status = el.querySelector(".m-status");
+      if (status) {
+        status.textContent = done ? "已通过" : "待完成";
+        status.className = "m-status " + (done ? "pass" : "");
+      }
+    });
+
     if (s.done === s.total && !progress.celebrated?.[lesson.id]) {
       progress.celebrated = progress.celebrated || {};
       progress.celebrated[lesson.id] = true;
       saveProgress();
-      toast("本节全部练习通过，可以进入下一课了。");
+      toast(lesson.type === "project" ? "项目全部检查点通过，可以整理进简历了。" : "本节全部练习通过，可以进入下一课了。");
     }
   }
 
@@ -1189,6 +1530,21 @@ async def main():
 await main()`,
     },
     {
+      name: "SQLite 内存数据库",
+      tag: "sqlite3",
+      code: `import sqlite3
+
+conn = sqlite3.connect(":memory:")
+conn.execute("CREATE TABLE tasks (id INTEGER PRIMARY KEY, title TEXT, done INTEGER)")
+conn.executemany(
+    "INSERT INTO tasks (title, done) VALUES (?, ?)",
+    [("复习生成器", 0), ("写周报", 1), ("跑步", 1)],
+)
+for row in conn.execute("SELECT id, title, done FROM tasks ORDER BY id"):
+    print(row)
+print(conn.execute("SELECT COUNT(*) FROM tasks WHERE done = 1").fetchone()[0])`,
+    },
+    {
       name: "JSON 读写",
       tag: "pathlib / json",
       code: `import json
@@ -1329,6 +1685,16 @@ print(loaded["name"], loaded["lessons"])`,
     }).join("");
 
     const doneLessons = ALL_LESSONS.filter((l) => lessonStats(l).done === l.exercises.length);
+    const doneProjects = PROJECTS.filter((p) => lessonStats(p).done === p.exercises.length);
+    const projectRows = PROJECTS.map((p) => {
+      const ps = lessonStats(p);
+      return `<a class="prog-row" href="#/project/${p.id}" style="--accent:${p.accent}">
+        <span class="idx">${p.index}</span>
+        <span class="name">${p.title}</span>
+        <div class="track"><i style="width:${ps.pct}%"></i></div>
+        <span class="pct">${ps.pct}%</span>
+      </a>`;
+    }).join("");
 
     app.innerHTML = `<div class="page">
       <span class="eyebrow">Progress · 本地保存</span>
@@ -1337,11 +1703,12 @@ print(loaded["name"], loaded["lessons"])`,
           <div class="big-ring-inner"><b>${s.pct}%</b><span>总完成度</span></div>
         </div>
         <div>
-          <h2>${s.done === s.total ? "全部通关，接下来靠项目了" : "保持手感，比看懂更重要"}</h2>
+          <h2>${s.done === s.total ? "全部通关，接下来靠你自己的项目了" : "保持手感，比看懂更重要"}</h2>
           <p>进度只存在这台设备的浏览器里。清除站点数据会重置，换设备不会同步。</p>
           <div class="prog-stats">
-            <div><b>${s.done}/${s.total}</b><span>练习与自测</span></div>
+            <div><b>${s.done}/${s.total}</b><span>练习与检查点</span></div>
             <div><b>${s.lessonsDone}/${ALL_LESSONS.length}</b><span>通关课程</span></div>
+            <div><b>${s.projectsDone}/${PROJECTS.length}</b><span>通关项目</span></div>
             <div><b>${s.streak}</b><span>连续学习天数</span></div>
             <div><b>${progress.dates.length}</b><span>累计学习日</span></div>
           </div>
@@ -1352,6 +1719,12 @@ print(loaded["name"], loaded["lessons"])`,
         <div><h2>模块进度</h2><p>点任意一行回到对应模块的第一课。</p></div>
       </div>
       <div class="prog-modules">${rows}</div>
+
+      <div class="section-head" style="margin-top:40px">
+        <div><h2>项目进度</h2><p>每个项目 4 个里程碑，全部通过才算完成。</p></div>
+        <a class="btn btn-outline btn-sm" href="#/projects">项目工坊 →</a>
+      </div>
+      <div class="prog-modules">${projectRows}</div>
 
       <div class="section-head" style="margin-top:40px">
         <div><h2>已通关课程</h2><p>${doneLessons.length ? "这些课的练习全部通过。" : "还没有通关的课程，先完成一节。"}</p></div>
@@ -1366,6 +1739,22 @@ print(loaded["name"], loaded["lessons"])`,
                 )
                 .join("")
             : `<div class="empty-state">从学习路径里选一节开始。</div>`
+        }
+      </div>
+
+      <div class="section-head" style="margin-top:40px">
+        <div><h2>已通关项目</h2><p>${doneProjects.length ? "这些项目的检查点全部通过，可以开始整理 README 与简历描述了。" : "项目不会自动变完整，选一个开始做。"}</p></div>
+      </div>
+      <div class="lesson-chips">
+        ${
+          doneProjects.length
+            ? doneProjects
+                .map(
+                  (p) =>
+                    `<a class="lesson-chip done" href="#/project/${p.id}"><span class="dot"></span><span>${p.title}</span><span class="go">回顾 →</span></a>`
+                )
+                .join("")
+            : `<div class="empty-state">从项目工坊里选一个开始。</div>`
         }
       </div>
 
@@ -1407,7 +1796,19 @@ print(loaded["name"], loaded["lessons"])`,
       return;
     }
 
+    if (parts[0] === "project" && parts[1]) {
+      setNav("projects");
+      document.title = findProject(parts[1]) ? `${findProject(parts[1]).title} · PyForge` : "项目工坊 · PyForge";
+      renderProject(parts[1], params);
+      return;
+    }
+
     switch (parts[0]) {
+      case "projects":
+        setNav("projects");
+        document.title = "项目工坊 · PyForge";
+        renderProjects();
+        break;
       case "books":
         setNav("books");
         document.title = "书单 · PyForge";
@@ -1440,6 +1841,23 @@ print(loaded["name"], loaded["lessons"])`,
      全局交互
      ------------------------------------------------------------------ */
   document.addEventListener("click", (e) => {
+    const downloadBtn = e.target.closest("[data-download]");
+    if (downloadBtn) {
+      const file = fileRegistry.get(downloadBtn.dataset.download);
+      if (file) {
+        const blob = new Blob([file.code], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        toast("已下载 " + file.filename);
+      }
+    }
+
     const copyBtn = e.target.closest("[data-copy]");
     if (copyBtn) {
       const host = copyBtn.closest(".cheat-item") || copyBtn.closest(".codeblock");
@@ -1483,5 +1901,13 @@ print(loaded["name"], loaded["lessons"])`,
     return;
   }
 
-  route();
+  try {
+    route();
+  } catch (err) {
+    console.error(err);
+    app.innerHTML = `<div class="page"><div class="callout warn">
+      <span class="co-icon">!</span>
+      <p><span class="co-title">页面渲染失败</span>${esc(err && err.message ? err.message : String(err))}</p>
+    </div></div>`;
+  }
 })();
